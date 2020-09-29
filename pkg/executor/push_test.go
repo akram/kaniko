@@ -37,7 +37,10 @@ import (
 	"github.com/spf13/afero"
 )
 
-const DefaultKanikoDockerConfigJson = "/kaniko/.docker/config.json"
+const (
+	DefaultKanikoDockerConfigJSON = "/kaniko/.docker/config.json"
+	DockerConfigEnvKey            = "DOCKER_CONFIG"
+)
 
 func mustTag(t *testing.T, s string) name.Tag {
 	tag, err := name.NewTag(s, name.StrictValidation)
@@ -48,9 +51,8 @@ func mustTag(t *testing.T, s string) name.Tag {
 }
 
 func TestDockerConfLocationWithFileLocation(t *testing.T) {
-	dcfg := "DOCKER_CONFIG"
-	originalDockerConfig := os.Getenv(dcfg)
-	if err := os.Unsetenv(dcfg); err != nil {
+	originalDockerConfig := os.Getenv(DockerConfigEnvKey)
+	if err := os.Unsetenv(DockerConfigEnvKey); err != nil {
 		t.Fatalf("Failed to unset DOCKER_CONFIG: %v", err)
 	}
 	file, err := ioutil.TempFile("", "docker.conf")
@@ -58,7 +60,7 @@ func TestDockerConfLocationWithFileLocation(t *testing.T) {
 		t.Fatalf("could not create temp file: %s", err)
 	}
 	defer os.Remove(file.Name())
-	if err := os.Setenv(dcfg, file.Name()); err != nil {
+	if err := os.Setenv(DockerConfigEnvKey, file.Name()); err != nil {
 		t.Fatalf("Failed to unset DOCKER_CONFIG: %v", err)
 	}
 	unset := DockerConfLocation()
@@ -70,9 +72,8 @@ func TestDockerConfLocationWithFileLocation(t *testing.T) {
 }
 
 func TestDockerConfLocationWithInvalidFileLocation(t *testing.T) {
-	dcfg := "DOCKER_CONFIG"
-	originalDockerConfig := os.Getenv(dcfg)
-	if err := os.Unsetenv(dcfg); err != nil {
+	originalDockerConfig := os.Getenv(DockerConfigEnvKey)
+	if err := os.Unsetenv(DockerConfigEnvKey); err != nil {
 		t.Fatalf("Failed to unset DOCKER_CONFIG: %v", err)
 	}
 	tmpDir, err := ioutil.TempDir("", "*")
@@ -82,12 +83,12 @@ func TestDockerConfLocationWithInvalidFileLocation(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 	random := "fdgdsfrdfgdf-fdfsf-24dsgfd" //replace with a really random string
 	file := filepath.Join(tmpDir, random)  // an random file name, shouldn't exist
-	if err := os.Setenv(dcfg, file); err != nil {
+	if err := os.Setenv(DockerConfigEnvKey, file); err != nil {
 		t.Fatalf("Failed to unset DOCKER_CONFIG: %v", err)
 	}
 	unset := DockerConfLocation()
 	// as file doesn't point to a real file,  DockerConfLocation() should return the default kaniko path for config.json
-	unsetExpected := DefaultKanikoDockerConfigJson
+	unsetExpected := DefaultKanikoDockerConfigJSON
 	if unset != unsetExpected {
 		t.Errorf("Unexpected default Docker configuration file location: expected:'%s' got:'%s'", unsetExpected, unset)
 	}
@@ -95,14 +96,13 @@ func TestDockerConfLocationWithInvalidFileLocation(t *testing.T) {
 }
 
 func TestDockerConfLocation(t *testing.T) {
-	dcfg := "DOCKER_CONFIG"
-	originalDockerConfig := os.Getenv(dcfg)
+	originalDockerConfig := os.Getenv(DockerConfigEnvKey)
 
-	if err := os.Unsetenv(dcfg); err != nil {
+	if err := os.Unsetenv(DockerConfigEnvKey); err != nil {
 		t.Fatalf("Failed to unset DOCKER_CONFIG: %v", err)
 	}
 	unset := DockerConfLocation()
-	unsetExpected := DefaultKanikoDockerConfigJson // will fail on Windows
+	unsetExpected := DefaultKanikoDockerConfigJSON // will fail on Windows
 	if unset != unsetExpected {
 		t.Errorf("Unexpected default Docker configuration file location: expected:'%s' got:'%s'", unsetExpected, unset)
 	}
@@ -114,11 +114,11 @@ func TestDockerConfLocation(t *testing.T) {
 
 	dir := filepath.Join(tmpDir, "/kaniko/.docker")
 	os.MkdirAll(dir, os.ModePerm)
-	if err := os.Setenv(dcfg, dir); err != nil {
+	if err := os.Setenv(DockerConfigEnvKey, dir); err != nil {
 		t.Fatalf("Failed to set DOCKER_CONFIG: %v", err)
 	}
 	kanikoDefault := DockerConfLocation()
-	kanikoDefaultExpected := filepath.Join(tmpDir, DefaultKanikoDockerConfigJson) // will fail on Windows
+	kanikoDefaultExpected := filepath.Join(tmpDir, DefaultKanikoDockerConfigJSON) // will fail on Windows
 	if kanikoDefault != kanikoDefaultExpected {
 		t.Errorf("Unexpected kaniko default Docker conf file location: expected:'%s' got:'%s'", kanikoDefaultExpected, kanikoDefault)
 	}
@@ -128,7 +128,7 @@ func TestDockerConfLocation(t *testing.T) {
 		t.Fatalf("could not create temp dir: %s", err)
 	}
 	defer os.RemoveAll(differentPath)
-	if err := os.Setenv(dcfg, differentPath); err != nil {
+	if err := os.Setenv(DockerConfigEnvKey, differentPath); err != nil {
 		t.Fatalf("Failed to set DOCKER_CONFIG: %v", err)
 	}
 	set := DockerConfLocation()
@@ -140,13 +140,12 @@ func TestDockerConfLocation(t *testing.T) {
 }
 
 func restoreOriginalDockerConfigEnv(t *testing.T, originalDockerConfig string) {
-	dcfg := "DOCKER_CONFIG"
 	if originalDockerConfig != "" {
-		if err := os.Setenv(dcfg, originalDockerConfig); err != nil {
+		if err := os.Setenv(DockerConfigEnvKey, originalDockerConfig); err != nil {
 			t.Fatalf("Failed to set DOCKER_CONFIG back to original value '%s': %v", originalDockerConfig, err)
 		}
 	} else {
-		if err := os.Unsetenv(dcfg); err != nil {
+		if err := os.Unsetenv(DockerConfigEnvKey); err != nil {
 			t.Fatalf("Failed to unset DOCKER_CONFIG after testing: %v", err)
 		}
 	}
